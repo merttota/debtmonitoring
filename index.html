@@ -10,17 +10,13 @@
         padding: 20px;
         background: #f7f7f7;
       }
-
-      h2,
-      h3 {
+      h2, h3 {
         color: #333;
       }
-
       input[type="month"] {
         padding: 8px;
         font-size: 16px;
       }
-
       table {
         border-collapse: collapse;
         margin-top: 20px;
@@ -31,30 +27,28 @@
         overflow: hidden;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
       }
-
-      th,
-      td {
+      th, td {
         border: 1px solid #ddd;
         padding: 10px;
         text-align: center;
       }
-
       th {
         background: #f0f0f0;
         font-weight: bold;
       }
-
-      input[type="text"],
       input[type="number"] {
-        width: 90%;
+        width: 95%;
         padding: 6px;
-        font-size: 14px;
+        font-size: 15px;
         border: 1px solid #ccc;
-        border-radius: 4px;
+        border-radius: 5px;
       }
-
+      input[type="number"]:focus {
+        border-color: #007bff;
+        outline: none;
+      }
       button {
-        margin-top: 20px;
+        margin-top: 15px;
         padding: 12px 18px;
         border: none;
         background: #25d366;
@@ -63,34 +57,41 @@
         cursor: pointer;
         border-radius: 6px;
         transition: background 0.2s;
+        width: 100%;
+        max-width: 300px;
       }
-
       button:hover {
         background: #1da851;
       }
-
       #calculateBtn {
         background: #007bff;
       }
-
       #calculateBtn:hover {
         background: #0056b3;
       }
-
       #remainingDebt {
         margin-top: 15px;
         font-size: 18px;
         font-weight: bold;
         color: #333;
       }
-
       #tableContainer {
         margin-top: 10px;
       }
-
       tfoot td {
         font-weight: bold;
         background: #f9f9f9;
+      }
+      @media (max-width: 600px) {
+        body {
+          padding: 10px;
+        }
+        table {
+          font-size: 14px;
+        }
+        input[type="number"] {
+          font-size: 14px;
+        }
       }
     </style>
   </head>
@@ -100,12 +101,8 @@
 
     <div id="tableContainer"></div>
 
-    <button id="calculateBtn" style="display: none">
-      🧮 Calculate Totals & Remaining Debt
-    </button>
-    <button id="sendWhatsAppBtn" style="display: none">
-      📩 Send via WhatsApp
-    </button>
+    <button id="calculateBtn" style="display:none">🧮 Calculate Totals & Remaining Debt</button>
+    <button id="sendWhatsAppBtn" style="display:none">📩 Send via WhatsApp</button>
 
     <div id="remainingDebt"></div>
 
@@ -116,47 +113,69 @@
       const calcBtn = document.getElementById("calculateBtn");
       const remainingDebtDiv = document.getElementById("remainingDebt");
 
-      // When a month is selected
+      // ---- CONFIG ----
+      const defaultDebt = 10000;
+      const whatsappNumber = "+905555555555"; // Buraya kendi numaranı gir (ülke koduyla)
+
+      // Load saved data when month changes
       monthPicker.addEventListener("change", () => {
         const [year, month] = monthPicker.value.split("-");
         const daysInMonth = new Date(year, month, 0).getDate();
+        const savedData = JSON.parse(localStorage.getItem(`data-${monthPicker.value}`)) || {};
 
         let tableHTML = `
-        <h3>Entries for ${monthPicker.value}</h3>
-        <table id="dataTable">
-          <thead>
-            <tr><th>Day</th><th>Debits</th><th>Credits</th></tr>
-          </thead>
-          <tbody>
-      `;
+          <h3>Entries for ${monthPicker.value}</h3>
+          <table id="dataTable">
+            <thead>
+              <tr><th>Day</th><th>Debits</th><th>Credits</th></tr>
+            </thead>
+            <tbody>
+        `;
 
         for (let day = 1; day <= daysInMonth; day++) {
+          const debitVal = savedData[`debit${day}`] || "";
+          const creditVal = savedData[`credit${day}`] || "";
           tableHTML += `
-          <tr>
-            <td>${String(day).padStart(2, "0")}/${month}/${year}</td>
-            <td><input type="number" id="debit${day}" placeholder="Debit"></td>
-            <td><input type="number" id="credit${day}" placeholder="Credit"></td>
-          </tr>
-        `;
+            <tr>
+              <td>${String(day).padStart(2, "0")}/${month}/${year}</td>
+              <td><input type="number" id="debit${day}" value="${debitVal}" inputmode="decimal" /></td>
+              <td><input type="number" id="credit${day}" value="${creditVal}" inputmode="decimal" /></td>
+            </tr>
+          `;
         }
 
         tableHTML += `
-          </tbody>
-          <tfoot>
-            <tr>
-              <td>Total</td>
-              <td id="totalDebit">0</td>
-              <td id="totalCredit">0</td>
-            </tr>
-          </tfoot>
-        </table>
-      `;
+            </tbody>
+            <tfoot>
+              <tr><td>Total</td><td id="totalDebit">0</td><td id="totalCredit">0</td></tr>
+            </tfoot>
+          </table>
+        `;
 
         tableContainer.innerHTML = tableHTML;
         sendBtn.style.display = "inline-block";
         calcBtn.style.display = "inline-block";
         remainingDebtDiv.textContent = "";
+
+        // Add event listeners for auto-save
+        const inputs = document.querySelectorAll("input[type='number']");
+        inputs.forEach(input => {
+          input.addEventListener("input", saveData);
+          input.addEventListener("focus", () => input.select());
+        });
       });
+
+      function saveData() {
+        if (!monthPicker.value) return;
+        const [year, month] = monthPicker.value.split("-");
+        const daysInMonth = new Date(year, month, 0).getDate();
+        const data = {};
+        for (let day = 1; day <= daysInMonth; day++) {
+          data[`debit${day}`] = document.getElementById(`debit${day}`)?.value || "";
+          data[`credit${day}`] = document.getElementById(`credit${day}`)?.value || "";
+        }
+        localStorage.setItem(`data-${monthPicker.value}`, JSON.stringify(data));
+      }
 
       // Calculate totals and remaining debt
       calcBtn.addEventListener("click", () => {
@@ -167,32 +186,28 @@
         let totalCredit = 0;
 
         for (let day = 1; day <= daysInMonth; day++) {
-          const debit =
-            parseFloat(document.getElementById(`debit${day}`).value) || 0;
-          const credit =
-            parseFloat(document.getElementById(`credit${day}`).value) || 0;
+          const debit = parseFloat(document.getElementById(`debit${day}`).value) || 0;
+          const credit = parseFloat(document.getElementById(`credit${day}`).value) || 0;
           totalDebit += debit;
           totalCredit += credit;
         }
 
-        document.getElementById("totalDebit").textContent =
-          totalDebit.toFixed(2);
-        document.getElementById("totalCredit").textContent =
-          totalCredit.toFixed(2);
+        document.getElementById("totalDebit").textContent = totalDebit.toFixed(2);
+        document.getElementById("totalCredit").textContent = totalCredit.toFixed(2);
 
-        const remainingDebt = totalCredit + 10000 - totalDebit;
-        remainingDebtDiv.textContent = `💰 Remaining Debt: ${remainingDebt.toFixed(
-          2
-        )}`;
+        const remainingDebt = totalCredit + defaultDebt - totalDebit;
+        remainingDebtDiv.textContent = `💰 Remaining Debt: ${remainingDebt.toFixed(2)}`;
+
+        // Save after calculation too
+        saveData();
       });
 
-      // Send via WhatsApp
+      // WhatsApp send button
       sendBtn.addEventListener("click", () => {
         if (!monthPicker.value) {
           alert("Please select a month first!");
           return;
         }
-
         const [year, month] = monthPicker.value.split("-");
         const daysInMonth = new Date(year, month, 0).getDate();
         let message = `📊 Debits & Credits for ${monthPicker.value}:\n\n`;
@@ -203,35 +218,18 @@
         for (let day = 1; day <= daysInMonth; day++) {
           const debit = document.getElementById(`debit${day}`).value.trim();
           const credit = document.getElementById(`credit${day}`).value.trim();
-
           if (debit !== "" || credit !== "") {
-            message += `${String(day).padStart(
-              2,
-              "0"
-            )}/${month}/${year} → Debit: ${debit || "-"}, Credit: ${
-              credit || "-"
-            }\n`;
+            message += `${String(day).padStart(2,"0")}/${month}/${year} → Debit: ${debit || "-"}, Credit: ${credit || "-"}\n`;
           }
-
           totalDebit += parseFloat(debit) || 0;
           totalCredit += parseFloat(credit) || 0;
         }
 
-        const remainingDebt = totalCredit + 10000 - totalDebit;
-
-        message += `\n🔹 Total Debit: ${totalDebit.toFixed(
-          2
-        )}\n🔹 Total Credit: ${totalCredit.toFixed(
-          2
-        )}\n💰 Remaining Debt: ${remainingDebt.toFixed(2)}`;
-
-        const phoneNumber = prompt(
-          "Enter WhatsApp number (with country code, e.g. +905555555555):"
-        );
-        if (!phoneNumber) return;
+        const remainingDebt = totalCredit + defaultDebt - totalDebit;
+        message += `\n🔹 Total Debit: ${totalDebit.toFixed(2)}\n🔹 Total Credit: ${totalCredit.toFixed(2)}\n💰 Remaining Debt: ${remainingDebt.toFixed(2)}`;
 
         const encoded = encodeURIComponent(message);
-        window.open(`https://wa.me/${phoneNumber}?text=${encoded}`, "_blank");
+        window.open(`https://wa.me/${whatsappNumber}?text=${encoded}`, "_blank");
       });
     </script>
   </body>
