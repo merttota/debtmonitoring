@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Debt Monitoring</title>
   <style>
     body {
@@ -13,26 +13,26 @@
       text-align: center;
     }
     h2 {
-      margin-bottom: 10px;
+      margin-bottom: 15px;
     }
     select, button {
-      margin: 10px;
       padding: 10px;
-      font-size: 16px;
-      border-radius: 6px;
+      margin: 5px;
       border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 15px;
     }
     table {
       width: 100%;
       max-width: 600px;
-      margin: auto;
+      margin: 20px auto;
       border-collapse: collapse;
       background: #fff;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     th, td {
       border: 1px solid #ccc;
-      padding: 10px;
+      padding: 8px;
       text-align: center;
     }
     th {
@@ -46,6 +46,14 @@
     tfoot td {
       font-weight: bold;
       background-color: #f0f0f0;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
     }
     #result {
       margin-top: 15px;
@@ -64,8 +72,12 @@
       border-radius: 8px;
       text-decoration: none;
     }
-    #whatsapp:hover {
-      background-color: #1ebe5d;
+    #reset {
+      background-color: #f44336;
+      margin-top: 10px;
+    }
+    #reset:hover {
+      background-color: #d32f2f;
     }
   </style>
 </head>
@@ -73,94 +85,103 @@
 
   <h2>Debt Monitoring Table</h2>
 
-  <label for="monthSelect">Select Month:</label>
-  <select id="monthSelect" onchange="generateDaysTable()">
-    <option value="">--Select--</option>
-    <option value="2025-01">January 2025</option>
-    <option value="2025-02">February 2025</option>
-    <option value="2025-03">March 2025</option>
-    <option value="2025-04">April 2025</option>
-    <option value="2025-05">May 2025</option>
-    <option value="2025-06">June 2025</option>
-    <option value="2025-07">July 2025</option>
-    <option value="2025-08">August 2025</option>
-    <option value="2025-09">September 2025</option>
-    <option value="2025-10">October 2025</option>
-    <option value="2025-11">November 2025</option>
-    <option value="2025-12">December 2025</option>
-  </select>
+  <div>
+    <select id="monthSelect"></select>
+    <select id="yearSelect"></select>
+    <button onclick="generateTable()">Generate Table</button>
+  </div>
 
-  <div id="tableContainer"></div>
+  <table id="debtTable">
+    <thead>
+      <tr>
+        <th>Day</th>
+        <th>Debit</th>
+        <th>Credit</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+    <tfoot>
+      <tr>
+        <td>Total</td>
+        <td id="totalDebit">0</td>
+        <td id="totalCredit">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <button onclick="calculateDebt()">Calculate Remaining Debt</button>
+  <button id="reset" onclick="resetData()">Reset Data</button>
 
   <div id="result"></div>
 
   <a id="whatsapp" href="#" target="_blank">📲 Open WhatsApp</a>
 
   <script>
-    // Get number of days in a month
-    function getDaysInMonth(year, month) {
-      return new Date(year, month, 0).getDate();
+    const monthSelect = document.getElementById("monthSelect");
+    const yearSelect = document.getElementById("yearSelect");
+    const tableBody = document.querySelector("#debtTable tbody");
+
+    // Fill month and year dropdowns
+    const months = [
+      "January","February","March","April","May","June",
+      "July","August","September","October","November","December"
+    ];
+    months.forEach((m, i) => {
+      const opt = document.createElement("option");
+      opt.value = i + 1;
+      opt.textContent = m;
+      monthSelect.appendChild(opt);
+    });
+
+    const currentYear = new Date().getFullYear();
+    for (let y = 2020; y <= 2035; y++) {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      if (y === currentYear) opt.selected = true;
+      yearSelect.appendChild(opt);
     }
 
-    // Generate table dynamically
-    function generateDaysTable() {
-      const monthValue = document.getElementById("monthSelect").value;
-      if (!monthValue) return;
-
-      const [year, month] = monthValue.split("-");
-      const days = getDaysInMonth(year, month);
-
-      let tableHTML = `
-        <table id="debtTable">
-          <thead>
-            <tr>
-              <th>Day</th>
-              <th>Debit</th>
-              <th>Credit</th>
-            </tr>
-          </thead>
-          <tbody>`;
-
-      for (let i = 1; i <= days; i++) {
-        tableHTML += `
-          <tr>
-            <td>${i}</td>
-            <td contenteditable="true" class="debit"></td>
-            <td contenteditable="true" class="credit"></td>
-          </tr>`;
-      }
-
-      tableHTML += `
-          </tbody>
-          <tfoot>
-            <tr>
-              <td>Total</td>
-              <td id="totalDebit">0</td>
-              <td id="totalCredit">0</td>
-            </tr>
-            <tr>
-              <td colspan="3">
-                <button onclick="calculateDebt()">💰 Calculate Remaining Debt</button>
-              </td>
-            </tr>
-          </tfoot>
-        </table>`;
-
-      document.getElementById("tableContainer").innerHTML = tableHTML;
-
-      document.querySelectorAll(".debit, .credit").forEach(cell => {
-        cell.addEventListener("input", updateTotals);
-      });
-    }
-
-    // Safe evaluation for math expressions
+    // Evaluate safe math expressions
     function safeEval(expression) {
       expression = expression.replace(/[^0-9+\-*/.()]/g, "");
       try {
         return Function('"use strict";return (' + expression + ')')();
-      } catch (e) {
+      } catch {
         return 0;
       }
+    }
+
+    function generateTable() {
+      const month = parseInt(monthSelect.value);
+      const year = parseInt(yearSelect.value);
+      const days = new Date(year, month, 0).getDate();
+      const key = `${year}-${month}`;
+
+      tableBody.innerHTML = "";
+
+      for (let d = 1; d <= days; d++) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${d}</td>
+          <td contenteditable="true" class="debit"></td>
+          <td contenteditable="true" class="credit"></td>
+        `;
+        tableBody.appendChild(row);
+      }
+
+      // Load saved data if exists
+      const saved = JSON.parse(localStorage.getItem(key));
+      if (saved) {
+        saved.forEach((r, i) => {
+          const debitCell = tableBody.rows[i].querySelector(".debit");
+          const creditCell = tableBody.rows[i].querySelector(".credit");
+          debitCell.innerText = r.debit;
+          creditCell.innerText = r.credit;
+        });
+      }
+
+      updateTotals();
     }
 
     function updateTotals() {
@@ -168,32 +189,64 @@
       const creditCells = document.querySelectorAll(".credit");
       let totalDebit = 0, totalCredit = 0;
 
-      debitCells.forEach(cell => {
-        let val = safeEval(cell.innerText.trim());
-        if (!isNaN(val)) totalDebit += val;
-      });
-      creditCells.forEach(cell => {
-        let val = safeEval(cell.innerText.trim());
-        if (!isNaN(val)) totalCredit += val;
-      });
+      debitCells.forEach(c => totalDebit += safeEval(c.innerText.trim() || "0"));
+      creditCells.forEach(c => totalCredit += safeEval(c.innerText.trim() || "0"));
 
       document.getElementById("totalDebit").innerText = totalDebit.toFixed(2);
       document.getElementById("totalCredit").innerText = totalCredit.toFixed(2);
+
+      saveData();
     }
 
     function calculateDebt() {
-      const totalDebit = parseFloat(document.getElementById("totalDebit").innerText) || 0;
-      const totalCredit = parseFloat(document.getElementById("totalCredit").innerText) || 0;
-      const remainingDebt = totalCredit + 10000 - totalDebit;
-      document.getElementById("result").innerText = "💰 Remaining Debt: " + remainingDebt.toFixed(2);
-
-      // Prepare WhatsApp message
-      const monthName = document.getElementById("monthSelect").options[document.getElementById("monthSelect").selectedIndex].text;
-      const message = `📆 ${monthName}\nTotal Debit: ${totalDebit.toFixed(2)}\nTotal Credit: ${totalCredit.toFixed(2)}\nRemaining Debt: ${remainingDebt.toFixed(2)}`;
-      
-      const phoneNumber = "905449468879"; // <-- replace with your WhatsApp number
-      document.getElementById("whatsapp").href = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+      const debit = parseFloat(document.getElementById("totalDebit").innerText) || 0;
+      const credit = parseFloat(document.getElementById("totalCredit").innerText) || 0;
+      const remaining = credit + 10000 - debit;
+      document.getElementById("result").innerText = `💰 Remaining Debt: ${remaining.toFixed(2)}`;
     }
+
+    function saveData() {
+      const month = monthSelect.value;
+      const year = yearSelect.value;
+      const key = `${year}-${month}`;
+      const data = [];
+
+      tableBody.querySelectorAll("tr").forEach(row => {
+        data.push({
+          debit: row.querySelector(".debit").innerText.trim(),
+          credit: row.querySelector(".credit").innerText.trim()
+        });
+      });
+
+      localStorage.setItem(key, JSON.stringify(data));
+    }
+
+    function resetData() {
+      const month = monthSelect.value;
+      const year = yearSelect.value;
+      localStorage.removeItem(`${year}-${month}`);
+      generateTable();
+    }
+
+    document.addEventListener("input", e => {
+      if (e.target.classList.contains("debit") || e.target.classList.contains("credit")) {
+        updateTotals();
+      }
+    });
+
+    // WhatsApp direct open (replace with your number)
+    const phoneNumber = "905449468879";
+    document.getElementById("whatsapp").addEventListener("click", e => {
+      e.preventDefault();
+      const text = `Remaining Debt Info for ${months[monthSelect.value - 1]} ${yearSelect.value}\nTotal Debit: ${document.getElementById("totalDebit").innerText}\nTotal Credit: ${document.getElementById("totalCredit").innerText}\n${document.getElementById("result").innerText}`;
+      window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(text)}`);
+    });
+
+    // Auto-load current month on start
+    const currentMonth = new Date().getMonth() + 1;
+    monthSelect.value = currentMonth;
+    generateTable();
   </script>
+
 </body>
 </html>
