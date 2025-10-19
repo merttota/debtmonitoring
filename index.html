@@ -238,7 +238,7 @@
     const phoneNumber = "905449468879";
     document.getElementById("whatsapp").addEventListener("click", e => {
       e.preventDefault();
-      const text = `Remaining Debt Info for ${months[monthSelect.value - 1]} ${yearSelect.value}\nTotal Debit: ${document.getElementById("totalDebit").innerText}\nTotal Credit: ${document.getElementById("totalCredit").innerText}\n${document.getElementById("result").innerText}`;
+      const text = `Kalan Borç Bilgilendirmesi ${months[monthSelect.value - 1]} ${yearSelect.value}\nToplam Ödenen: ${document.getElementById("totalDebit").innerText}\nToplam Harcanan: ${document.getElementById("totalCredit").innerText}\n${document.getElementById("result").innerText}`;
       window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(text)}`);
     });
 
